@@ -1,0 +1,936 @@
+# ML PROJECT FOLDER STRUCTURE GUIDE
+
+This document describes a general, scalable folder structure for a machine learning project written in Python. It is designed to work well for solo projects, research projects, and team-based projects that may later grow into production systems.
+
+The goal of this structure is to keep the project organized, reproducible, and easy to maintain as it becomes larger and more complex.
+
+1. OVERVIEW
+   ===========
+
+A good machine learning project structure should make it easy to:
+
+* keep data organized
+* separate experiments from reusable code
+* reproduce results
+* train and evaluate models consistently
+* avoid turning notebooks into the main application
+* support version control with Git
+* scale from simple prototypes to larger systems
+
+A common scalable structure looks like this:
+
+ml-project/
+├── .venv/
+├── .gitignore
+├── .env
+├── README.md
+├── requirements.txt
+├── pyproject.toml
+├── configs/
+├── data/
+│   ├── raw/
+│   ├── interim/
+│   ├── processed/
+│   └── external/
+├── notebooks/
+│   ├── exploratory/
+│   └── reports/
+├── src/
+│   └── project_name/
+│       ├── **init**.py
+│       ├── data/
+│       ├── models/
+│       ├── utils/
+│       └── pipelines/
+├── scripts/
+├── tests/
+├── models/
+│   ├── checkpoints/
+│   └── exported/
+├── reports/
+│   ├── figures/
+│   └── metrics/
+├── logs/
+└── docs/
+
+Not every project needs every folder at the beginning. The important thing is that the structure has a clear purpose and can grow without becoming messy.
+
+2. ROOT LEVEL FILES AND FOLDERS
+   ===============================
+
+## 2.1 .venv/
+
+This is the Python virtual environment directory.
+
+Purpose:
+
+* stores the isolated Python interpreter and installed packages for this project
+* keeps dependencies separate from other Python projects on the same machine
+
+Typical contents:
+
+* bin/ or Scripts/
+* lib/
+* include/
+* activation scripts
+
+Important notes:
+
+* this folder is local to your machine
+* it should not be committed to Git
+* it is usually added to .gitignore
+
+Example creation:
+python -m venv .venv
+
+Why keep it in the root:
+
+* easy to find
+* many tools detect it automatically
+* clearly tied to the project
+
+## 2.2 .gitignore
+
+This file tells Git which files and folders should not be tracked.
+
+Typical ignored files:
+
+* .venv/
+* .env
+* **pycache**/
+* *.pyc
+* large generated artifacts
+* temporary logs
+* local notebook checkpoints
+
+Example:
+
+.venv/
+.env
+**pycache**/
+*.pyc
+.ipynb_checkpoints/
+data/raw/
+models/checkpoints/
+logs/
+
+Purpose:
+
+* prevents local-only files from polluting the repository
+* avoids committing secrets, caches, and large generated files
+* keeps the repo cleaner and easier to share
+
+## 2.3 .env
+
+This is a plain text file containing environment variables.
+
+Typical contents:
+
+* API keys
+* database URLs
+* model registry tokens
+* local configuration values
+
+Example:
+API_KEY=your_key_here
+DATABASE_URL=postgres://user:pass@localhost/db
+DEBUG=true
+
+Purpose:
+
+* stores configuration outside the code
+* avoids hardcoding secrets or machine-specific settings
+
+Important notes:
+
+* do not commit real secrets
+* often you commit a .env.example file instead
+
+## 2.4 README.md
+
+This is the main documentation entry point for the project.
+
+It should explain:
+
+* what the project does
+* how to install it
+* how to run training
+* how to run inference
+* how the folder structure works
+* how to reproduce results
+
+A good README makes the project easier for both yourself and others to understand later.
+
+## 2.5 requirements.txt
+
+This lists Python dependencies, usually one per line.
+
+Example:
+numpy
+pandas
+scikit-learn
+matplotlib
+torch
+
+Purpose:
+
+* provides a simple way to install dependencies
+* useful for many standard Python workflows
+
+Example install:
+pip install -r requirements.txt
+
+## 2.6 pyproject.toml
+
+This is a modern Python project configuration file.
+
+It may define:
+
+* package metadata
+* build system
+* dependencies
+* development tool settings
+* formatter and linter settings
+
+Many modern Python projects prefer this over older configuration methods.
+
+Purpose:
+
+* centralizes project configuration
+* supports packaging and tooling
+* works well for scalable and maintainable projects
+
+3. CONFIGURATION
+   ================
+
+## 3.1 configs/
+
+This folder contains configuration files for different tasks and experiments.
+
+Examples:
+
+* default.yaml
+* training.yaml
+* inference.yaml
+* experiment_a.yaml
+* experiment_b.yaml
+
+Typical configuration values:
+
+* file paths
+* hyperparameters
+* training batch size
+* learning rate
+* model architecture settings
+* feature selection options
+* random seed
+* logging settings
+
+Purpose:
+
+* keeps settings outside the code
+* avoids hardcoding parameters
+* makes experiments reproducible
+* allows changing behavior without editing Python files
+
+This is one of the most important folders in a scalable ML project.
+
+4. DATA STORAGE
+   ===============
+
+## 4.1 data/
+
+This folder stores datasets and dataset transformations.
+
+A common structure is:
+
+data/
+├── raw/
+├── interim/
+├── processed/
+└── external/
+
+The main idea is that different stages of the data pipeline are separated clearly.
+
+## 4.2 data/raw/
+
+This contains the original, untouched data.
+
+Examples:
+
+* raw CSV exports
+* original JSON files
+* downloaded archives
+* initial sensor logs
+* original labels from annotation tools
+
+Rules:
+
+* do not edit files here manually
+* treat these as the source of truth
+* if cleaning is needed, write code to transform them into later stages
+
+Purpose:
+
+* preserves the original data
+* improves reproducibility
+* makes debugging easier
+
+If something goes wrong downstream, you can always go back to the raw input.
+
+## 4.3 data/interim/
+
+This contains partially transformed data.
+
+This is the stage between raw and fully processed.
+
+Examples:
+
+* cleaned but not feature-engineered tables
+* merged datasets before final encoding
+* normalized text before tokenization
+* deduplicated records
+* missing values handled, but not yet split for training
+
+Purpose:
+
+* stores useful intermediate results
+* separates cleaning from final preparation
+* avoids repeating expensive preprocessing steps
+* makes debugging transformations easier
+
+Simple mental model:
+raw = original
+interim = partially prepared
+processed = final model-ready data
+
+## 4.4 data/processed/
+
+This contains fully prepared data ready for modeling.
+
+Examples:
+
+* train/validation/test splits
+* encoded feature tables
+* tokenized text datasets
+* normalized tensors
+* model-ready parquet files
+
+Purpose:
+
+* final input for training and evaluation
+* standardized format for pipelines
+* faster reuse across experiments
+
+Rules:
+
+* do not hand-edit files here
+* generate them from code
+* make sure they can be reproduced from raw/interim steps
+
+## 4.5 data/external/
+
+This stores data obtained from outside sources that are not raw project data in the narrow sense.
+
+Examples:
+
+* pre-trained embeddings
+* third-party benchmark datasets
+* downloaded reference tables
+* public metadata files
+* external taxonomies or ontologies
+
+Purpose:
+
+* separates outside dependencies from your own project data
+* keeps provenance clearer
+
+5. NOTEBOOKS
+   ============
+
+## 5.1 notebooks/
+
+This folder stores Jupyter notebooks or similar interactive work.
+
+A common structure:
+
+notebooks/
+├── exploratory/
+└── reports/
+
+## 5.2 notebooks/exploratory/
+
+Used for:
+
+* data exploration
+* trying ideas quickly
+* visualization
+* testing preprocessing ideas
+* quick model baselines
+
+Purpose:
+
+* rapid experimentation
+* human exploration of data and methods
+
+Important rule:
+
+* do not let notebooks become the main application logic
+* move reusable code into src/ when it stabilizes
+
+Notebooks are best for exploration, not long-term architecture.
+
+## 5.3 notebooks/reports/
+
+Used for:
+
+* presentation-ready notebooks
+* clean summary notebooks
+* model evaluation notebooks for sharing
+* result walkthroughs
+
+Purpose:
+
+* separate rough exploration from cleaner reporting work
+
+6. SOURCE CODE
+   ==============
+
+## 6.1 src/
+
+This is where the actual reusable Python code should live.
+
+Typical structure:
+
+src/
+└── project_name/
+├── **init**.py
+├── data/
+├── models/
+├── utils/
+└── pipelines/
+
+Purpose:
+
+* keeps core logic organized
+* makes the project more modular
+* supports imports cleanly
+* avoids relying on notebooks as the main code base
+
+This is the most important code folder in the project.
+
+## 6.2 src/project_name/**init**.py
+
+Marks the folder as a Python package.
+
+Purpose:
+
+* allows imports such as:
+  from project_name.data.load import load_dataset
+* helps organize code in a standard Python way
+
+## 6.3 src/project_name/data/
+
+This contains data-related logic.
+
+Typical files:
+
+* load.py
+* preprocess.py
+* features.py
+* split.py
+* validate.py
+
+Common responsibilities:
+
+* reading datasets
+* schema checking
+* cleaning rules
+* feature engineering
+* dataset splitting
+* data validation
+
+Purpose:
+
+* centralizes data pipeline logic
+* keeps transformations reproducible
+* avoids duplicating data preparation code across notebooks
+
+## 6.4 src/project_name/models/
+
+This contains model-related logic.
+
+Typical files:
+
+* train.py
+* predict.py
+* evaluate.py
+* architecture.py
+* losses.py
+
+Common responsibilities:
+
+* training loops
+* model definition
+* evaluation metrics
+* inference logic
+* checkpoint loading
+
+Purpose:
+
+* clean separation of modeling code
+* easier extension when multiple models are added
+* easier testing and reuse
+
+## 6.5 src/project_name/utils/
+
+This contains small reusable utilities.
+
+Typical files:
+
+* logging.py
+* metrics.py
+* helpers.py
+* io.py
+* seeds.py
+
+Purpose:
+
+* shared helper functions
+* generic tools used across multiple modules
+* keeps code DRY
+
+Important note:
+
+* avoid dumping everything here without structure
+* only put genuinely reusable utilities here
+
+## 6.6 src/project_name/pipelines/
+
+This contains higher-level orchestration code.
+
+Typical files:
+
+* training_pipeline.py
+* inference_pipeline.py
+* data_pipeline.py
+
+Purpose:
+
+* connects multiple steps together
+* defines end-to-end workflows
+* makes project execution more structured
+
+Example:
+A training pipeline may:
+
+1. load raw or processed data
+
+2. preprocess it
+
+3. initialize the model
+
+4. train the model
+
+5. evaluate the results
+
+6. save outputs and metrics
+
+7. SCRIPTS
+   ==========
+
+## 7.1 scripts/
+
+This folder contains runnable scripts used as entry points.
+
+Examples:
+
+* run_training.py
+* run_inference.py
+* download_data.py
+* make_dataset.py
+* evaluate_model.py
+
+Purpose:
+
+* gives convenient commands for common operations
+* keeps top-level execution separate from library code in src/
+* useful for command-line workflows and automation
+
+Difference from src/:
+
+* src/ contains reusable logic
+* scripts/ contains executable entry points that call that logic
+
+8. TESTING
+   ==========
+
+## 8.1 tests/
+
+This folder contains automated tests.
+
+Examples:
+
+* test_data.py
+* test_models.py
+* test_utils.py
+* test_pipeline.py
+
+Purpose:
+
+* catches bugs early
+* protects refactoring
+* increases confidence as the project grows
+
+Things worth testing:
+
+* preprocessing behavior
+* feature creation
+* dataset shapes
+* model training functions
+* evaluation metrics
+* file loading logic
+
+Even in small ML projects, basic tests help a lot.
+
+9. MODEL ARTIFACTS
+   ==================
+
+## 9.1 models/
+
+This folder stores trained model artifacts.
+
+A common structure:
+
+models/
+├── checkpoints/
+└── exported/
+
+## 9.2 models/checkpoints/
+
+Stores intermediate or resumable training states.
+
+Examples:
+
+* epoch_01.pt
+* epoch_10.pt
+* best_model.ckpt
+
+Purpose:
+
+* resume training
+* compare intermediate models
+* recover from interruptions
+
+These files can become large, so many teams do not commit them to Git.
+
+## 9.3 models/exported/
+
+Stores finalized model artifacts ready for inference, deployment, or sharing.
+
+Examples:
+
+* model.onnx
+* final_model.pkl
+* best_model.pt
+* tokenizer/
+* label_encoder.pkl
+
+Purpose:
+
+* separates deployable outputs from temporary checkpoints
+* makes deployment workflows cleaner
+
+10. REPORTS AND OUTPUTS
+    =======================
+
+## 10.1 reports/
+
+This folder stores analysis outputs and summaries.
+
+Common structure:
+
+reports/
+├── figures/
+└── metrics/
+
+## 10.2 reports/figures/
+
+Stores plots and visual outputs.
+
+Examples:
+
+* training_loss.png
+* confusion_matrix.png
+* feature_importance.png
+* roc_curve.png
+
+Purpose:
+
+* keeps generated visuals organized
+* useful for documentation and presentations
+
+## 10.3 reports/metrics/
+
+Stores numeric results and evaluation summaries.
+
+Examples:
+
+* metrics.json
+* cross_validation_results.csv
+* benchmark_summary.txt
+
+Purpose:
+
+* supports experiment comparison
+* makes results easier to inspect later
+* useful for reporting and reproducibility
+
+11. LOGS
+    ========
+
+## 11.1 logs/
+
+This folder stores runtime logs.
+
+Examples:
+
+* training.log
+* inference.log
+* error.log
+
+Purpose:
+
+* debugging
+* monitoring
+* reviewing long training runs
+
+In more advanced projects, logs may be handled by external systems, but a local logs/ folder is still common and useful.
+
+12. DOCUMENTATION
+    =================
+
+## 12.1 docs/
+
+This folder contains project documentation beyond the README.
+
+Examples:
+
+* architecture notes
+* data dictionary
+* experiment tracking notes
+* deployment instructions
+* API documentation
+* design decisions
+
+Purpose:
+
+* keeps extended documentation organized
+* helps teams share knowledge
+* reduces dependence on memory or chat history
+
+13. PRACTICAL DEVELOPMENT RULES
+    ===============================
+
+A scalable folder structure works best when combined with a few rules.
+
+## 13.1 Keep reusable logic out of notebooks
+
+Use notebooks for exploration, but move stable code into src/.
+
+Bad pattern:
+
+* important preprocessing exists only in a notebook
+
+Better pattern:
+
+* notebook explores an idea
+* final implementation goes into src/project_name/data/preprocess.py
+
+## 13.2 Never manually edit raw data
+
+Treat data/raw/ as read-only.
+
+Reason:
+
+* protects reproducibility
+* avoids accidental corruption
+* makes the pipeline traceable
+
+## 13.3 Use configuration files
+
+Do not hardcode:
+
+* file paths
+* learning rates
+* model names
+* random seeds
+
+Store them in configs/ instead.
+
+Reason:
+
+* easier experimentation
+* better reproducibility
+* fewer accidental code changes
+
+## 13.4 Separate training and inference
+
+Even early in a project, keep training logic and inference logic clearly separated.
+
+Reason:
+
+* deployment usually needs inference only
+* prevents accidental coupling
+* makes the project easier to maintain
+
+## 13.5 Write tests for anything reused
+
+If preprocessing, feature engineering, or training functions are reused more than once, they should probably be tested.
+
+Reason:
+
+* ML projects often break through data changes rather than syntax errors
+* tests catch these issues earlier
+
+## 13.6 Keep local machine-specific files out of Git
+
+Examples:
+
+* .venv/
+* .env
+* large raw datasets
+* temporary checkpoints
+* editor settings
+* caches
+
+Reason:
+
+* cleaner repository
+* easier collaboration
+* fewer merge problems
+
+14. MINIMAL VERSION FOR SMALLER PROJECTS
+    ========================================
+
+A smaller version of the same idea might look like this:
+
+ml-project/
+├── .venv/
+├── .gitignore
+├── README.md
+├── requirements.txt
+├── data/
+│   ├── raw/
+│   └── processed/
+├── notebooks/
+├── src/
+│   └── project_name/
+│       ├── data.py
+│       ├── model.py
+│       └── utils.py
+├── scripts/
+├── tests/
+└── models/
+
+This is often enough for a solo project, while still keeping good structure.
+
+15. EXTENDED VERSION FOR LARGER OR PRODUCTION PROJECTS
+    ======================================================
+
+When the project grows, you may add folders like:
+
+experiments/
+deployment/
+monitoring/
+infrastructure/
+ci/
+
+Examples of their purpose:
+
+experiments/
+
+* experiment logs
+* experiment metadata
+* manual comparison notes
+
+deployment/
+
+* API serving code
+* Docker files
+* model serving setup
+* deployment configs
+
+monitoring/
+
+* monitoring scripts
+* drift detection
+* runtime health checks
+
+infrastructure/
+
+* cloud setup
+* Terraform
+* Kubernetes configs
+* storage definitions
+
+ci/
+
+* continuous integration workflows
+* automated testing pipelines
+* build checks
+
+These are useful when the project moves beyond local experimentation.
+
+16. EXAMPLE OF HOW WORK FLOWS THROUGH THE PROJECT
+    =================================================
+
+A typical workflow might look like this:
+
+1. Raw source files are placed in data/raw/
+2. A script in scripts/ or logic in src/project_name/data/ cleans them
+3. Intermediate outputs are saved in data/interim/
+4. Final features and splits are saved in data/processed/
+5. Training is started through scripts/run_training.py
+6. The training logic uses src/project_name/models/train.py
+7. Configuration is read from configs/training.yaml
+8. Checkpoints are saved in models/checkpoints/
+9. Final model is saved in models/exported/
+10. Metrics are written to reports/metrics/
+11. Figures are written to reports/figures/
+12. Logs are written to logs/
+
+This makes the entire project easier to understand and reproduce.
+
+17. FINAL SUMMARY
+    =================
+
+The key idea behind a scalable machine learning folder structure is separation of concerns.
+
+Each part of the project should have a clear place:
+
+* .venv/ for the Python environment
+* .env for environment variables and secrets
+* configs/ for reproducible settings
+* data/ for staged data storage
+* notebooks/ for exploration
+* src/ for real reusable code
+* scripts/ for runnable entry points
+* tests/ for validation
+* models/ for model artifacts
+* reports/ for outputs
+* logs/ for runtime information
+* docs/ for extended documentation
+
+The most important principles are:
+
+* do not let notebooks become the real application
+* keep raw data untouched
+* move stable logic into src/
+* use config files for settings
+* ignore local and secret files in Git
+* keep the project easy to reproduce
+
+A well-structured project saves time, reduces mistakes, and scales much better when the codebase, dataset, and number of experiments grow.
+
+END OF DOCUMENT
